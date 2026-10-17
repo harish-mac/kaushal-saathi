@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kaushal Saathi – PMKVY Voice Assistant</title>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#14213d;--muted:#5c677d;--brand:#e85d04;--brand2:#fb8500;--ok:#e7f6ec;--okb:#2b9348;--line:#e3e6ef}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#171e2e;--ink:#eef1f8;--muted:#9aa6bd;--ok:#12301f;--okb:#59d48a;--line:#27304a}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Devanagari",sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;padding:28px 20px 56px}
+.wrap{max-width:860px;margin:0 auto}
+h1{margin:0 0 6px;font-size:1.8rem}header p{margin:0;opacity:.95}
+main{max-width:860px;margin:-36px auto 40px;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+select,input[type=text]{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:1rem}
+input[type=text]{flex:1;min-width:200px}
+button{border:0;border-radius:10px;padding:12px 18px;font-size:1rem;cursor:pointer;background:var(--brand);color:#fff;font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+#mic{width:72px;height:72px;border-radius:50%;font-size:1.8rem;padding:0}
+#mic.rec{background:#c1121f;animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 14px rgba(193,18,31,.18)}}
+.msg{padding:12px 14px;border-radius:14px;margin:8px 0;max-width:88%;line-height:1.5}
+.u{background:var(--bg);margin-left:auto;border:1px solid var(--line)}.a{background:var(--ok);border:1px solid var(--okb)}
+.docs li{margin:4px 0}.muted{color:var(--muted);font-size:.9rem}
+details{margin-top:8px}pre{white-space:pre-wrap;font-size:.8rem;background:var(--bg);padding:10px;border-radius:8px;overflow:auto}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.chip{font-size:.85rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line);cursor:pointer}
+footer{text-align:center;color:var(--muted);font-size:.85rem;padding-bottom:30px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>🛠️ Kaushal Saathi</h1>
+  <p>Speak in your language. Find out if you qualify for <b>free, government-certified</b> skill training under PMKVY.</p>
+</div></header>
+<main>
+  <div class="card">
+    <div class="row">
+      <button id="mic" title="Tap to speak">🎤</button>
+      <div style="flex:1;min-width:220px">
+        <div class="row">
+          <select id="lang"></select>
+          <label class="muted"><input type="checkbox" id="speak" checked> Speak replies</label>
+          <button class="ghost" id="reset">Reset</button>
+        </div>
+        <div class="muted" id="status" style="margin-top:8px">Tap the mic, speak, tap again to send.</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <input type="text" id="txt" placeholder="…or type your question">
+      <button id="send">Send</button>
+    </div>
+    <div class="msg a" id="greet" style="margin-top:12px"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div class="card" id="chat" style="display:none"></div>
+  <div class="card" id="docs" style="display:none"><b>📄 Keep these ready</b><ul class="docs" id="docslist"></ul>
+    <p class="muted">Apply on the Skill India Digital Hub (SIDH) → PMKVY → choose a nearby batch. Training is free. Never pay anyone.</p></div>
+  <!--SARVAM_WIDGET-->
+  <p class="muted">Powered by Sarvam AI: Saaras v4 (speech-to-text) · Sarvam-105B (reasoning) · Mayura (translation) · Bulbul v3 (voice) · Sarvam Vision (document ingest). Indicative guidance only, confirm with your nearest training centre. · <a href="/llms.txt">llms.txt</a></p>
+</main>
+<footer>Kaushal Saathi · built for the Sarvam AI hackathon</footer>
+
+<script>
+const LANGS={"hi-IN":"हिन्दी","en-IN":"English","mr-IN":"मराठी","ta-IN":"தமிழ்","te-IN":"తెలుగు","bn-IN":"বাংলা","gu-IN":"ગુજરાતી","kn-IN":"ಕನ್ನಡ","ml-IN":"മലയാളം","pa-IN":"ਪੰਜਾਬੀ","od-IN":"ଓଡ଼ିଆ"};
+const SAMPLES=["I am 35 and work as a tailor","I am 19 and have no job","Is there any fee for PMKVY?","How do I register step by step?"];
+const $=id=>document.getElementById(id), sid=crypto.randomUUID();
+$("lang").innerHTML=Object.entries(LANGS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+$("lang").value="en-IN";
+async function greet(play){const l=$("lang").value;try{const j=await (await fetch(`/api/greet?lang=${l}&speak=${!!(play&&$("speak").checked)}`)).json();$("greet").textContent=j.text;if(j.audio)new Audio("data:audio/wav;base64,"+j.audio).play().catch(()=>{})}catch(e){}}
+$("lang").onchange=()=>greet(true);greet(false);
+SAMPLES.forEach(s=>{const c=document.createElement("span");c.className="chip";c.textContent=s;c.onclick=()=>{$("txt").value=s;send()};$("chips").append(c)});
+
+function bubble(cls,t){$("chat").style.display="block";const d=document.createElement("div");d.className="msg "+cls;d.textContent=t;$("chat").append(d);d.scrollIntoView({behavior:"smooth",block:"end"});return d}
+
+async function post(fd){
+  $("status").textContent="Thinking…";
+  try{
+    const r=await fetch("/api/chat",{method:"POST",body:fd}); const j=await r.json();
+    if(!r.ok) throw new Error(j.error||"error");
+    if(fd.get("audio")) bubble("u",j.heard);
+    bubble("a",j.reply);
+    if(j.checklist&&j.checklist.length){$("docs").style.display="block";$("docslist").innerHTML=j.checklist.map(x=>`<li>${x}</li>`).join("")}
+    const det=document.createElement("details");det.innerHTML=`<summary class="muted">🔍 How I decided</summary><pre>${JSON.stringify({profile:j.profile,eligibility:j.elig,sources:j.sources},null,2)}</pre>`;$("chat").append(det);
+    if(j.audio){const a=new Audio("data:audio/wav;base64,"+j.audio);a.play().catch(()=>{});}
+    $("status").textContent="Tap the mic, speak, tap again to send.";
+  }catch(e){$("status").textContent="⚠️ "+e.message}
+}
+function send(){const t=$("txt").value.trim();if(!t)return;bubble("u",t);const fd=new FormData();
+  fd.append("sid",sid);fd.append("lang",$("lang").value);fd.append("text",t);fd.append("speak",$("speak").checked);$("txt").value="";post(fd)}
+$("send").onclick=send;$("txt").onkeydown=e=>{if(e.key==="Enter")send()};
+$("reset").onclick=async()=>{const fd=new FormData();fd.append("sid",sid);await fetch("/api/reset",{method:"POST",body:fd});$("chat").innerHTML="";$("chat").style.display="none";$("docs").style.display="none"};
+
+// ---- mic → 16 kHz mono WAV (what Saaras expects) ----
+let rec,chunks=[];
+async function toWav(blob){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const buf=await ctx.decodeAudioData(await blob.arrayBuffer());
+  const off=new OfflineAudioContext(1,Math.ceil(buf.duration*16000),16000);
+  const s=off.createBufferSource();s.buffer=buf;s.connect(off.destination);s.start();
+  const pcm=(await off.startRendering()).getChannelData(0);
+  const v=new DataView(new ArrayBuffer(44+pcm.length*2));const w=(o,t)=>[...t].forEach((c,i)=>v.setUint8(o+i,c.charCodeAt(0)));
+  w(0,"RIFF");v.setUint32(4,36+pcm.length*2,true);w(8,"WAVEfmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,pcm.length*2,true);
+  pcm.forEach((x,i)=>v.setInt16(44+i*2,Math.max(-1,Math.min(1,x))*0x7fff,true));
+  return new Blob([v],{type:"audio/wav"});
+}
+$("mic").onclick=async()=>{
+  if(rec&&rec.state==="recording"){rec.stop();return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});
+    rec=new MediaRecorder(st);chunks=[];rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=async()=>{st.getTracks().forEach(t=>t.stop());$("mic").classList.remove("rec");$("status").textContent="Listening to your recording…";
+      const wav=await toWav(new Blob(chunks));const fd=new FormData();fd.append("sid",sid);fd.append("lang",$("lang").value);
+      fd.append("speak",$("speak").checked);fd.append("audio",wav,"audio.wav");post(fd)};
+    rec.start();$("mic").classList.add("rec");$("status").textContent="🔴 Recording… tap again to send";
+  }catch(e){$("status").textContent="⚠️ Microphone blocked. Allow mic access or type instead."}
+};
+</script>
+</body>
+</html>

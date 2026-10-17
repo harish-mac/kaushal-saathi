@@ -1,0 +1,8 @@
+streamlit>=1.40
+fastapi
+uvicorn
+python-multipart
+requests
+python-dotenv
+sarvamai
+# optional desktop/mobile client:  pip install kivy
